@@ -15,14 +15,27 @@ import RotateRightIcon from '@mui/icons-material/RotateRight';
 import RotateLeftIcon from '@mui/icons-material/RotateLeft';
 import CropIcon from '@mui/icons-material/Crop';
 
-import { Container, Button, Slider, Grid, Typography, Stack, Card, useMediaQuery } from '@mui/material';
-import { display } from '@mui/system';
+import { Container, Button, Slider, Grid, Typography, Stack, Card, LinearProgress, Box } from '@mui/material';
 
-
+function LinearProgressWithLabel(props) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+      <Box sx={{ width: '100%', mr: 1 }}>
+        <LinearProgress variant="determinate" {...props} />
+      </Box>
+      <Box sx={{ minWidth: 35 }}>
+        <Typography variant="body2" color="text.secondary">{`${Math.round(
+          props.value,
+        )}%`}</Typography>
+      </Box>
+    </Box>
+  );
+}
 function App() {
   const inputImage = useRef();
   const imageRef = useRef();
   const [srcImage, setSrcImage] = useState();
+  const [progress, setProgress] = useState()
 
   const [brightness, setBrightness] = useState(100)
   const [contrast, setContrast] = useState(100);
@@ -120,27 +133,52 @@ function App() {
     ctx.scale(flipHorizontal, flipVertical);
     ctx.drawImage(imageRef.current, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
 
-    const link = document.createElement("a");
+    const url = canvas.toDataURL();
+    const xmlHttp = new XMLHttpRequest();
+    xmlHttp.open("GET", url );
+    xmlHttp.onprogress = function(pr) {
+      setProgress(pr.loaded/pr.total * 100)
+    };
+    xmlHttp.onloadend = function(){
+      const link = document.createElement("a");
+      link.download = "image.jpg";
+      link.href = url;
+      link.click();
+      window.URL.revokeObjectURL(url);
+
+      setTimeout(() => {
+        setProgress();
+      }, 1000);
+    }
+    xmlHttp.send();
+
+    /* const link = document.createElement("a");
     link.download = "image.jpg";
     link.href = canvas.toDataURL();
-    link.click();
+    link.click(); */
   }
 
   return (
     <div className="App" style={{ backgroundColor: "#E7E9EB" }}>
-      <Container maxWidth="lg" sx={{ display: "flex",alignItems: 'center', justifyContent: "center", alignItems: "center", minHeight: "100vh"}} >
+      <Container maxWidth="lg" sx={{ display: "flex",alignItems: 'center', justifyContent: "center", minHeight: "100vh"}} >
         <Grid container sx={{ flexDirection: { xs: 'column', md: 'row' } }} spacing={2} alignItems="center" justifyContent='center'>
           {/* Image */}
-          <Grid item xs={12} md={8}>
+          <Grid item xs={12} md={8} sx={{ flexDirection: "column", display: "flex"}} alignItems="center" justifyContent='center'>
             {srcImage ?
               <ReactCrop crop={crop} ruleOfThirds={true} onChange={c => setCrop(c)}>
                 <img ref={imageRef} style={{ maxWidth: '100%', maxHeight: '100%' }} src={srcImage} alt='previewImage'></img>
+
+                {progress && 
+                <Box sx={{ width: '100%', padding: "16px 0"}}>
+                  <LinearProgressWithLabel value={progress} />
+                </Box>}
+
               </ReactCrop>
               : 'Choose image'}
           </Grid>
 
           {/* Control */}
-          <Grid item xs={10} md={3} sx={{ backgroundColor: 'while', width: '100%', display: 'flex', justifyContent:"center"}} >
+          <Grid item xs={10} md={4} sx={{ backgroundColor: 'while', width: '100%', display: 'flex', justifyContent:"center"}} >
             <Card sx={{ 
                       width: '100%',
                       padding: "30px 20px", 
